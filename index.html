@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>姓名判断・生年月日占い・タロット ツール</title>
+<style>
+  body{font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#222;background:#fafafa}
+  h1{font-size:20px;margin-bottom:4px}
+  p.desc{font-size:13px;color:#666;margin-top:0}
+  .tabbar{display:flex;gap:8px;margin-bottom:16px}
+  .tabbar button{flex:1;padding:10px;border:1px solid #ccc;background:#fff;border-radius:8px;cursor:pointer;font-size:14px}
+  .tabbar button.active{border:2px solid #185fa5;background:#e6f1fb;color:#0c447c}
+  input[type=text],input[type=date],input[type=number]{padding:8px;border:1px solid #ccc;border-radius:6px;font-size:14px}
+  label{font-size:13px;color:#666}
+  button.action{width:100%;padding:10px;border:2px solid #185fa5;background:#e6f1fb;color:#0c447c;border-radius:8px;cursor:pointer;font-size:14px;margin-top:8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .card{border-radius:12px;padding:12px}
+  .card p{margin:0}
+  .card .label{font-size:12px;margin-bottom:4px}
+  .card .val{font-size:22px;font-weight:500}
+  .card .note{font-size:11px;margin-top:6px}
+  .taikichi{background:#e1f5ee;color:#04342c}
+  .kichi{background:#e6f1fb;color:#042c53}
+  .hankichi{background:#faeeda;color:#412402}
+  .kyou{background:#faece7;color:#4a1b0c}
+  .purple{background:#eeedfe;color:#26215c}
+  .pink{background:#fbeaf0;color:#4b1528}
+  .teal{background:#e1f5ee;color:#04342c}
+  .amber{background:#faeeda;color:#412402}
+  .manualBox{background:#f1efe8;border-radius:8px;padding:12px;margin-top:12px}
+  .manualRow{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .footnote{font-size:11px;color:#999;margin-top:12px}
+</style>
+</head>
+<body>
+<h1>姓名判断・生年月日占い・タロット ツール</h1>
+<p class="desc">姓名判断（陰陽五行つき）、数秘術・星座・干支・九星気学、タロットをまとめて診断できます。</p>
+
+<div class="tabbar">
+  <button id="tab-mei" class="active">姓名判断</button>
+  <button id="tab-suu">生年月日占い</button>
+  <button id="tab-tarot">タロット</button>
+</div>
+
+<div id="panel-mei">
+  <p style="font-size:13px;color:#666">姓と名を漢字で入力してください。辞書にない漢字は画数を手動で入力できます。</p>
+  <div style="display:flex;gap:12px;margin-bottom:12px">
+    <div style="flex:1"><label>姓</label><br><input id="sei" type="text" placeholder="例: 山田" style="width:100%"></div>
+    <div style="flex:1"><label>名</label><br><input id="mei" type="text" placeholder="例: 太郎" style="width:100%"></div>
+  </div>
+  <button id="calcMei" class="action">判定する</button>
+  <div id="manualWrap"></div>
+  <div id="meiResult"></div>
+</div>
+
+<div id="panel-suu" style="display:none">
+  <p style="font-size:13px;color:#666">生年月日から、数秘術・西洋占星術（星座）・干支・九星気学をまとめて診断します。</p>
+  <label>生年月日</label><br>
+  <input id="bday" type="date" style="width:100%;margin-bottom:12px">
+  <button id="calcSuu" class="action">計算する</button>
+  <div id="suuResult"></div>
+</div>
+
+<div id="panel-tarot" style="display:none">
+  <p style="font-size:13px;color:#666">大アルカナ22枚から、今のあなたへの1枚を引きます。</p>
+  <button id="drawTarot" class="action">カードを引く</button>
+  <div id="tarotResult"></div>
+</div>
+
+<script>
+const strokeDict = {"山":3,"田":5,"川":3,"木":4,"本":5,"村":7,"中":4,"上":3,"下":3,"大":3,"小":3,"高":10,"橋":16,"石":5,"井":4,"藤":18,"原":10,"野":11,"崎":11,"島":10,"松":8,"竹":6,"林":8,"森":12,"谷":7,"沢":7,"内":4,"外":5,"西":6,"東":8,"南":9,"北":5,"佐":7,"賀":12,"伊":6,"斉":8,"斎":11,"渡":12,"辺":5,"清":11,"水":4,"鈴":13,"吉":6,"太":4,"郎":9,"一":1,"二":2,"三":3,"四":5,"五":4,"六":4,"七":2,"八":2,"九":2,"十":2,"子":3,"美":9,"香":9,"花":7,"愛":13,"恵":10,"里":7,"奈":8,"菜":11,"翔":12,"健":11,"直":8,"樹":16,"陽":12,"光":6,"優":17,"真":10,"理":11,"由":5,"咲":9,"結":12,"衣":6,"心":4,"羽":6,"斗":4,"翼":17,"空":8,"海":9,"陸":11,"颯":14,"蓮":13,"湊":12,"新":13,"悠":11,"人":2,"介":4,"輔":14,"平":5,"和":8,"実":8,"雄":12,"男":7,"夫":4,"彦":9,"哉":9,"也":3,"史":5,"文":4,"武":8,"勇":9,"力":2,"正":5,"義":13,"信":9,"忠":8,"孝":7,"誠":13,"仁":4,"元":4,"幸":8,"栄":9,"茂":8,"豊":13,"勝":12,"隆":11,"昭":9,"明":8,"久":3,"雅":13,"典":8,"秀":7,"英":8,"俊":9,"智":12,"聡":14,"創":12,"裕":12,"洋":9,"良":7,"千":3,"代":5,"世":5,"江":6,"枝":8,"穂":15,"沙":7,"紗":10,"織":18,"莉":10,"梨":11,"桃":10,"杏":7,"葉":12,"月":4,"星":9,"雪":11,"冬":5,"春":9,"夏":10,"秋":9,"晴":12,"央":5,"奏":9,"音":9,"詩":13,"歌":14,"夢":13,"希":7,"望":11,"未":5,"来":7,"永":5,"知":8,"佳":8,"祐":9,"友":4,"亮":9,"涼":11,"諒":15,"純":10,"淳":11,"潤":15,"薫":16,"綾":14,"彩":11,"茜":9,"瑞":13,"瑠":14,"璃":15,"桜":10,"椿":13,"楓":13};
+
+const table81 = {1:"大吉",2:"凶",3:"大吉",4:"凶",5:"大吉",6:"吉",7:"吉",8:"吉",9:"凶",10:"凶",11:"吉",12:"凶",13:"大吉",14:"凶",15:"大吉",16:"大吉",17:"吉",18:"吉",19:"凶",20:"凶",21:"大吉",22:"凶",23:"大吉",24:"大吉",25:"吉",26:"凶",27:"半吉",28:"凶",29:"吉",30:"半吉",31:"大吉",32:"吉",33:"大吉",34:"凶",35:"吉",36:"凶",37:"吉",38:"半吉",39:"大吉",40:"凶",41:"大吉",42:"半吉",43:"半吉",44:"凶",45:"吉",46:"凶",47:"吉",48:"吉",49:"凶",50:"半吉",51:"半吉",52:"吉",53:"半吉",54:"凶",55:"半吉",56:"凶",57:"吉",58:"半吉",59:"凶",60:"凶",61:"半吉",62:"凶",63:"吉",64:"凶",65:"吉",66:"凶",67:"吉",68:"吉",69:"凶",70:"凶",71:"半吉",72:"半吉",73:"吉",74:"凶",75:"半吉",76:"凶",77:"半吉",78:"半吉",79:"凶",80:"半吉",81:"大吉"};
+function judge(n){ let x=n; while(x>81) x-=80; if(x<1) x=1; return table81[x]||"凶"; }
+function judgeClass(j){ if(j==="大吉") return "taikichi"; if(j==="吉") return "kichi"; if(j==="半吉") return "hankichi"; return "kyou"; }
+
+function elementOf(n){ let d=n%10; if(d===0) d=10; if(d<=2) return "木"; if(d<=4) return "火"; if(d<=6) return "土"; if(d<=8) return "金"; return "水"; }
+function yinyangOf(n){ return n%2===0 ? "陰" : "陽"; }
+const sheng = {"木":"火","火":"土","土":"金","金":"水","水":"木"};
+const ke = {"木":"土","土":"水","水":"火","火":"金","金":"木"};
+function relation(a,b){ if(a===b) return "同"; if(sheng[a]===b) return "相生"; if(ke[a]===b) return "相剋"; return "普通"; }
+
+function splitChars(s){ return Array.from(s.trim()); }
+function getStrokes(chars, prefix){
+  let unknown=[]; let known={};
+  chars.forEach((c,i)=>{ if(strokeDict[c]&&strokeDict[c]>0){ known[prefix+i]=strokeDict[c]; } else { unknown.push({key:prefix+i, char:c}); } });
+  return {known, unknown};
+}
+function renderManualInputs(unknownList){
+  const wrap = document.getElementById("manualWrap");
+  if(unknownList.length===0){ wrap.innerHTML=""; return; }
+  let html = '<div class="manualBox"><p style="font-size:13px;color:#666;margin:0 0 8px">辞書にない文字があります。画数を入力してください。</p>';
+  unknownList.forEach(u=>{ html += '<div class="manualRow"><span style="font-size:16px;min-width:24px">'+u.char+'</span><input type="number" min="1" max="40" style="width:80px" data-key="'+u.key+'" class="manualInput"><span style="font-size:12px;color:#999">画</span></div>'; });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function doMeiCalc(){
+  const seiChars = splitChars(document.getElementById("sei").value);
+  const meiChars = splitChars(document.getElementById("mei").value);
+  if(seiChars.length===0 || meiChars.length===0){
+    document.getElementById("meiResult").innerHTML = '<p style="color:#c0392b;font-size:14px">姓と名の両方を入力してください。</p>';
+    return;
+  }
+  const seiData = getStrokes(seiChars,"s");
+  const meiData = getStrokes(meiChars,"m");
+  const allUnknown = seiData.unknown.concat(meiData.unknown);
+  const manualInputs = document.querySelectorAll(".manualInput");
+  let manualVals = {};
+  manualInputs.forEach(inp=>{ manualVals[inp.dataset.key] = parseInt(inp.value)||0; });
+  const stillMissing = allUnknown.filter(u => !manualVals[u.key] || manualVals[u.key]<1);
+  if(stillMissing.length>0){
+    renderManualInputs(allUnknown);
+    document.getElementById("meiResult").innerHTML = '<p style="font-size:13px;color:#666">上の画数を入力してから、もう一度「判定する」を押してください。</p>';
+    return;
+  }
+  renderManualInputs([]);
+  function strokesOf(chars, data, prefix){ return chars.map((c,i)=>{ const key=prefix+i; return data.known[key]!==undefined ? data.known[key] : manualVals[key]; }); }
+  const seiStrokes = strokesOf(seiChars, seiData, "s");
+  const meiStrokes = strokesOf(meiChars, meiData, "m");
+  const tenkaku = seiStrokes.reduce((a,b)=>a+b,0);
+  const chikaku = meiStrokes.reduce((a,b)=>a+b,0);
+  const soukaku = tenkaku + chikaku;
+  const seiLast = seiStrokes[seiStrokes.length-1] + (seiStrokes.length===1?1:0);
+  const meiFirst = meiStrokes[0] + (meiStrokes.length===1?1:0);
+  const jinkaku = seiLast + meiFirst;
+  const gaikaku = soukaku - jinkaku + 2;
+
+  const rows = [
+    {label:"天格（姓の画数）", val:tenkaku, note:"家系・先祖運。本人の性格には直結しません。"},
+    {label:"人格（姓名の中心）", val:jinkaku, note:"性格・才能・人柄を表す最重要の格。"},
+    {label:"地格（名の画数）", val:chikaku, note:"幼少期〜中年期の運勢、基礎的な行動力。"},
+    {label:"外格（対人運）", val:gaikaku, note:"社会運・対人関係・家庭運。"},
+    {label:"総格（生涯運）", val:soukaku, note:"人生全体、特に中年期以降の総合運。"}
+  ];
+  let html = '<div class="grid">';
+  rows.forEach(r=>{
+    const j = judge(r.val); const cls = judgeClass(j);
+    const el = elementOf(r.val); const yy = yinyangOf(r.val);
+    html += '<div class="card '+cls+'"><p class="label">'+r.label+'</p><p class="val">'+r.val+'画　<span style="font-size:14px">'+j+'</span></p><p style="font-size:12px;margin-top:6px">'+yy+'・'+el+'</p><p class="note">'+r.note+'</p></div>';
+  });
+  html += '</div>';
+
+  const tEl = elementOf(tenkaku), jEl = elementOf(jinkaku), cEl = elementOf(chikaku);
+  const rel1 = relation(tEl, jEl), rel2 = relation(jEl, cEl);
+  let sansaiText;
+  if(rel1==="相剋" || rel2==="相剋"){ sansaiText = "三才（天格・人格・地格）に相剋の関係があります。物事が停滞しやすい暗示なので、対人関係やタイミングに注意すると良いでしょう。"; }
+  else if(rel1==="相生" && rel2==="相生"){ sansaiText = "三才の配置は良好です。天・人・地のエネルギーがスムーズに循環し、物事が運びやすい配置です。"; }
+  else { sansaiText = "三才は穏やかな配置です。大きな乱れはなく、安定した運気の流れです。"; }
+  html += '<div class="card purple" style="margin-top:10px"><p style="font-size:14px;font-weight:bold;margin-bottom:4px">三才配置（陰陽五行）</p><p style="font-size:13px;line-height:1.6">天格'+tEl+'　→　人格'+jEl+'（'+rel1+'）　→　地格'+cEl+'（'+rel2+'）</p><p style="font-size:13px;line-height:1.6;margin-top:6px">'+sansaiText+'</p></div>';
+  html += '<p class="footnote">※ 画数辞書・五行判定は簡易版のため、正式な流派とは異なる場合があります。参考程度にご覧ください。</p>';
+  document.getElementById("meiResult").innerHTML = html;
+}
+
+const zodiacList = [
+  {name:"山羊座", from:[12,22], to:[1,19], trait:"堅実で責任感が強く、目標に向かってコツコツ努力するタイプ。"},
+  {name:"水瓶座", from:[1,20], to:[2,18], trait:"自由な発想と独立心を持つ、個性派タイプ。"},
+  {name:"魚座", from:[2,19], to:[3,20], trait:"感受性豊かで共感力が高い、夢見がちなタイプ。"},
+  {name:"牡羊座", from:[3,21], to:[4,19], trait:"行動力があり、まっすぐに物事に向き合うタイプ。"},
+  {name:"牡牛座", from:[4,20], to:[5,20], trait:"安定志向でマイペース、五感を大切にするタイプ。"},
+  {name:"双子座", from:[5,21], to:[6,21], trait:"好奇心旺盛でフットワークが軽い、社交的なタイプ。"},
+  {name:"蟹座", from:[6,22], to:[7,22], trait:"情に厚く、身近な人を大切にする世話好きタイプ。"},
+  {name:"獅子座", from:[7,23], to:[8,22], trait:"堂々としていて、周囲を惹きつける存在感のあるタイプ。"},
+  {name:"乙女座", from:[8,23], to:[9,22], trait:"細やかな気配りができる、完璧主義なタイプ。"},
+  {name:"天秤座", from:[9,23], to:[10,23], trait:"バランス感覚に優れ、調和を大切にするタイプ。"},
+  {name:"蠍座", from:[10,24], to:[11,22], trait:"情熱を内に秘めた、探究心の強いタイプ。"},
+  {name:"射手座", from:[11,23], to:[12,21], trait:"自由でポジティブ、冒険を楽しむタイプ。"}
+];
+function getZodiac(m,d){
+  for(const z of zodiacList){
+    const [fm,fd]=z.from, [tm,td]=z.to;
+    if(fm<=tm){ if((m===fm&&d>=fd)||(m===tm&&d<=td)||(m>fm&&m<tm)) return z; }
+    else { if((m===fm&&d>=fd)||(m===tm&&d<=td)||m>fm||m<tm) return z; }
+  }
+  return zodiacList[0];
+}
+const etoList = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+function getEto(y){ const r=(y-4)%12; return etoList[r<0?r+12:r]; }
+const kyuseiList = {1:"一白水星",2:"二黒土星",3:"三碧木星",4:"四緑木星",5:"五黄土星",6:"六白金星",7:"七赤金星",8:"八白土星",9:"九紫火星"};
+function getKyusei(y){
+  let s = String(y).split("").reduce((a,b)=>a+Number(b),0);
+  while(s>9) s = String(s).split("").reduce((a,b)=>a+Number(b),0);
+  let n = 11 - s;
+  if(n>9) n -= 9;
+  if(n<1) n += 9;
+  return kyuseiList[n];
+}
+
+function doSuuCalc(){
+  const val = document.getElementById("bday").value;
+  if(!val){ document.getElementById("suuResult").innerHTML = '<p style="color:#c0392b;font-size:14px">生年月日を選択してください。</p>'; return; }
+  const [y,m,d] = val.split("-").map(Number);
+  const digits = val.replace(/-/g,"").split("").map(Number);
+  function reduce(nums){ let sum = nums.reduce((a,b)=>a+b,0); while(sum>9 && sum!==11 && sum!==22 && sum!==33){ sum = String(sum).split("").reduce((a,b)=>a+Number(b),0); } return sum; }
+  const num = reduce(digits);
+  const meanings = {1:"独立心とリーダーシップ。自分の道を切り拓く開拓者タイプ。",2:"協調性とバランス感覚。人をつなぎ、調和を生み出すタイプ。",3:"表現力と創造性。楽観的で周囲を明るくするタイプ。",4:"堅実さと責任感。コツコツ積み上げる努力家タイプ。",5:"自由と変化。好奇心旺盛でフットワークが軽いタイプ。",6:"愛情と奉仕。家族やチームを大切にする世話役タイプ。",7:"探究心と直感。深く物事を考える研究者タイプ。",8:"実行力と物質的成功。組織を動かすリーダータイプ。",9:"博愛と包容力。広い視野で人を導く理想主義タイプ。",11:"直感力とひらめき。精神性の高いメッセンジャータイプ。",22:"大きな理想を現実にする実現者タイプ。",33:"無償の愛と献身。人々を癒し導くタイプ。"};
+  const z = getZodiac(m,d);
+  const eto = getEto(y);
+  const kyusei = getKyusei(y);
+
+  let html = '<div class="card kichi">';
+  html += '<p class="label">運命数（ライフパスナンバー）</p>';
+  html += '<p class="val" style="font-size:32px">'+num+'</p>';
+  html += '<p style="font-size:14px;line-height:1.6;margin-top:8px">'+meanings[num]+'</p></div>';
+
+  html += '<div class="grid">';
+  html += '<div class="card pink"><p class="label">星座</p><p class="val" style="font-size:18px">'+z.name+'</p><p style="font-size:12px;margin-top:6px">'+z.trait+'</p></div>';
+  html += '<div class="card teal"><p class="label">干支</p><p class="val" style="font-size:18px">'+eto+'</p></div>';
+  html += '<div class="card amber" style="grid-column:1 / -1"><p class="label">九星気学（本命星）</p><p class="val" style="font-size:18px">'+kyusei+'</p></div>';
+  html += '</div>';
+  html += '<p class="footnote">※ 九星は立春を基準に切り替わるため、1〜2月生まれの方は前年扱いになる場合があります。簡易計算のため参考値としてご覧ください。</p>';
+  document.getElementById("suuResult").innerHTML = html;
+}
+
+const majorArcana = [
+  {name:"0 愚者", mean:"自由、新しい始まり。何にもとらわれず一歩を踏み出すとき。"},
+  {name:"I 魔術師", mean:"創造力、可能性。持っている力を使いこなせるとき。"},
+  {name:"II 女教皇", mean:"直感、静けさ。焦らず内なる声に耳を傾けて。"},
+  {name:"III 女帝", mean:"豊かさ、母性。実りと満たされた気持ちの兆し。"},
+  {name:"IV 皇帝", mean:"権威、安定。自分の軸を持って進むとき。"},
+  {name:"V 教皇", mean:"伝統、助言。信頼できる人の言葉が力になる。"},
+  {name:"VI 恋人", mean:"選択、調和。心が惹かれる方を選んでいい。"},
+  {name:"VII 戦車", mean:"前進、勝利。勢いに乗って突き進むとき。"},
+  {name:"VIII 力", mean:"忍耐、内なる強さ。優しさが困難を乗り越える力になる。"},
+  {name:"IX 隠者", mean:"内省、探求。一人の時間が答えを与えてくれる。"},
+  {name:"X 運命の輪", mean:"転機、巡り合わせ。流れが変わるタイミング。"},
+  {name:"XI 正義", mean:"公平、決断。筋を通せば良い結果につながる。"},
+  {name:"XII 吊るされた男", mean:"我慢、視点の転換。今は動かない選択も意味がある。"},
+  {name:"XIII 死神", mean:"終わりと再生。区切りをつけることで次が始まる。"},
+  {name:"XIV 節制", mean:"バランス、調和。無理のないペースが吉。"},
+  {name:"XV 悪魔", mean:"執着、誘惑。楽な方に流されすぎないよう注意。"},
+  {name:"XVI 塔", mean:"崩壊、予期せぬ変化。ショックの後に新しい視界が開ける。"},
+  {name:"XVII 星", mean:"希望、癒し。願いが叶う兆し、心を明るく保って。"},
+  {name:"XVIII 月", mean:"不安、潜在意識。不透明でも焦らず様子を見て。"},
+  {name:"XIX 太陽", mean:"成功、喜び。物事が明るく開けていく暗示。"},
+  {name:"XX 審判", mean:"復活、決断の時。過去の経験が活きるとき。"},
+  {name:"XXI 世界", mean:"完成、達成。ひとつのサイクルが満ちるとき。"}
+];
+function doTarot(){
+  const card = majorArcana[Math.floor(Math.random()*majorArcana.length)];
+  document.getElementById("tarotResult").innerHTML =
+    '<div class="card purple" style="text-align:center">'+
+    '<p class="val" style="font-size:22px">'+card.name+'</p>'+
+    '<p style="font-size:14px;line-height:1.6;margin-top:8px">'+card.mean+'</p></div>';
+}
+
+document.getElementById("calcMei").addEventListener("click", doMeiCalc);
+document.getElementById("calcSuu").addEventListener("click", doSuuCalc);
+document.getElementById("drawTarot").addEventListener("click", doTarot);
+
+function activate(which){
+  const panels = {mei:"panel-mei", suu:"panel-suu", tarot:"panel-tarot"};
+  const tabs = {mei:"tab-mei", suu:"tab-suu", tarot:"tab-tarot"};
+  Object.keys(panels).forEach(k=>{
+    document.getElementById(panels[k]).style.display = (k===which) ? "block":"none";
+    document.getElementById(tabs[k]).classList.toggle("active", k===which);
+  });
+}
+document.getElementById("tab-mei").addEventListener("click", ()=>activate("mei"));
+document.getElementById("tab-suu").addEventListener("click", ()=>activate("suu"));
+document.getElementById("tab-tarot").addEventListener("click", ()=>activate("tarot"));
+</script>
+</body>
+</html>
