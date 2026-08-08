@@ -1,0 +1,592 @@
+<div id="app">
+  <header class="hdr">
+    <div class="hdr-l">
+      <div class="eyebrow">TRIP TIMELINE</div>
+      <h1 id="tripTitle" contenteditable="true" spellcheck="false">南紀勝浦の旅</h1>
+      <p class="sub" id="tripSub">2026/8/9(日) – 8/11(火) ／ 2泊3日</p>
+    </div>
+    <div class="hdr-r">
+      <div class="seg" id="seg">
+        <button data-view="edit" class="on">組み立てる</button>
+        <button data-view="read">しおり</button>
+      </div>
+      <button class="btn" id="btnAdd">スポットを追加</button>
+      <button class="btn ghost" id="btnSpan">またぎを追加</button>
+      <button class="btn ghost" id="btnShare">みんなで共有</button>
+      <button class="btn ghost" id="btnExport">書き出す</button>
+      <button class="btn ghost" id="btnReset">初期状態に戻す</button>
+    </div>
+  </header>
+
+  <div class="syncbar" id="syncbar"></div>
+  <div class="alerts" id="alerts"></div>
+  <section class="spans" id="spans"></section>
+  <div class="legend" id="legend"></div>
+  <main id="list" class="list"></main>
+  <p class="hint" id="hint"></p>
+</div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"></div>
+
+<style>
+#app{
+  --paper:#EDF1F3; --card:#FFFFFF; --ink:#0B2233; --ink-2:#4A6076; --line:#CBD8E0;
+  --sea:#1B5E8C; --amber:#C98A1E; --coral:#B8452E; --jade:#2E7D6B; --plum:#6B4A9E; --slate:#6B7A8F;
+  --mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  font-family: var(--sans); color: var(--ink); background: var(--paper);
+  padding:22px 16px 48px; border-radius:14px; -webkit-tap-highlight-color: transparent;
+  font-feature-settings:"palt" 1; text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+#app *{box-sizing:border-box;}
+.hdr{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:14px;}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--sea);font-weight:700;}
+#tripTitle{font-size:28px;line-height:1.25;margin:6px 0 4px;font-weight:800;letter-spacing:.005em;outline:none;}
+.sub{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-2);}
+.hdr-r{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.btn{font-family:var(--sans);font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:999px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+.btn:active{transform:translateY(1px);}
+.btn:focus-visible,#tripTitle:focus-visible,.seg button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+.seg{display:flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;margin-right:4px;}
+.seg button{font-family:var(--sans);font-size:12px;font-weight:700;padding:7px 13px;border:none;background:transparent;color:var(--ink);cursor:pointer;}
+.seg button.on{background:var(--ink);color:#fff;}
+
+.syncbar{display:none;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:12px;color:var(--ink-2);}
+.syncbar.on{display:flex;flex-wrap:wrap;}
+.syncbar b{font-family:var(--mono);letter-spacing:.18em;color:var(--sea);font-size:13px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--jade);flex:0 0 auto;}
+.dot.warn{background:var(--coral);}
+.syncbar .lnk{margin-left:auto;background:none;border:none;color:var(--sea);font-family:var(--sans);font-size:11.5px;font-weight:700;cursor:pointer;padding:0;}
+
+.alerts{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.alert{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.5;background:#FDF1EE;border-left:4px solid var(--coral);border-radius:0 7px 7px 0;padding:8px 10px;color:#7A2C1C;}
+.alert.mild{background:#FBF4E4;border-left-color:var(--amber);color:#6E4B0C;}
+.alert b{font-weight:700;}
+
+.spans{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.spanbar{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-left:5px solid var(--jade);background:#fff;border-radius:0 8px 8px 0;padding:8px 10px;box-shadow:0 1px 0 var(--line);}
+.spanbar .t{font-size:13px;font-weight:700;}
+.spanbar .r{font-family:var(--mono);font-size:11px;color:var(--ink-2);}
+.spanbar .x{border:none;background:none;color:var(--ink-2);cursor:pointer;font-size:15px;padding:2px 6px;}
+
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.legend span{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);display:flex;align-items:center;gap:4px;}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+.list{position:relative;}
+.day-header{display:flex;align-items:baseline;gap:12px;margin:38px 0 14px;padding-left:2px;}
+.day-header .d{font-family:var(--mono);font-size:27px;font-weight:700;letter-spacing:-.03em;}
+.day-header .w{font-family:var(--mono);font-size:11px;color:var(--ink-2);letter-spacing:.1em;}
+.day-header .rule{flex:1;height:2px;background:var(--ink);opacity:.85;}
+.day-header .sum{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);}
+
+/* スポット間の移動（カードではなく継ぎ目） */
+.move{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);
+  padding:5px 0 5px 66px;margin-bottom:3px;}
+.move .l{width:2px;height:22px;background:var(--line);margin-left:-11px;margin-right:9px;flex:0 0 auto;}
+.move.stale{color:var(--coral);font-weight:700;}
+.move button{border:1px solid var(--line);background:#fff;border-radius:999px;font-family:var(--mono);font-size:10px;color:inherit;padding:1px 8px;cursor:pointer;}
+
+.card{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:start;
+  background:var(--card);border:1px solid var(--line);border-left:5px solid var(--slate);
+  border-radius:0 10px 10px 0;padding:13px 12px 13px 10px;margin-bottom:7px;
+  touch-action:pan-y;cursor:grab;transition:box-shadow .12s,transform .12s;}
+.card:hover{box-shadow:0 2px 10px rgba(11,34,51,.09);}
+.card.dragging{position:fixed;z-index:60;width:var(--dw);pointer-events:none;cursor:grabbing;
+  box-shadow:0 14px 34px rgba(11,34,51,.28);transform:rotate(-.6deg) scale(1.015);opacity:.97;}
+.card.bad{border-color:var(--coral);box-shadow:inset 3px 0 0 var(--coral);}
+.ph{border:2px dashed var(--sea);border-radius:8px;background:rgba(27,94,140,.06);margin-bottom:5px;}
+.time{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;line-height:1.25;letter-spacing:-.02em;}
+.time .end{display:block;font-size:10.5px;font-weight:500;color:var(--ink-2);}
+.time .pin{color:var(--amber);font-size:9px;}
+.body .t{font-size:15px;font-weight:700;line-height:1.55;letter-spacing:.005em;}
+.body .m{font-size:12px;color:var(--ink-2);line-height:1.8;margin-top:6px;white-space:pre-wrap;letter-spacing:.01em;}
+.body .m a{color:var(--sea);}
+.flag{display:inline-block;font-size:10.5px;font-weight:700;color:var(--coral);margin-top:4px;line-height:1.5;}
+.tag{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;padding:1px 6px;border-radius:3px;color:#fff;margin-right:6px;vertical-align:1px;}
+.ops{display:flex;flex-direction:column;gap:2px;}
+.ops button{border:1px solid var(--line);background:#fff;border-radius:5px;width:26px;height:22px;font-size:11px;line-height:1;color:var(--ink-2);cursor:pointer;}
+.dur{font-family:var(--mono);font-size:10px;color:var(--ink-2);text-align:center;margin-top:2px;}
+.empty{font-size:12px;color:var(--ink-2);padding:8px 0 4px;font-style:italic;}
+.hint{font-size:11.5px;color:var(--ink-2);line-height:1.7;margin-top:22px;border-top:1px solid var(--line);padding-top:10px;}
+.pin-ic{color:var(--amber);}
+@keyframes shifted{0%{background:#FFF3D6;box-shadow:inset 4px 0 0 var(--amber);}100%{background:var(--card);box-shadow:none;}}
+.card.shifted{animation:shifted 1.4s ease-out;}
+@keyframes settle{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+#app.read .card{animation:settle .38s ease-out backwards;}
+
+/* しおりモード */
+#app.read{padding:28px 20px 56px;}
+#app.read .card{cursor:default;grid-template-columns:70px 1fr;gap:16px;padding:18px 4px 18px 14px;border:none;border-left:3px solid var(--slate);background:transparent;border-radius:0;margin-bottom:0;}
+#app.read .body{max-width:46em;}
+#app.read .day-header{margin:46px 0 6px;}
+#app.read .card:hover{box-shadow:none;}
+#app.read .ops,#app.read .dur,#app.read .legend,#app.read .move button{display:none;}
+#app.read .body .t{font-size:16px;}
+#app.read .body .m{font-size:12.5px;}
+#app.read .time{font-size:16px;}
+#app.read .move{padding-left:68px;}
+
+.sheet-bg{display:none;position:fixed;inset:0;background:rgba(11,34,51,.42);z-index:80;}
+.sheet{display:none;position:fixed;z-index:90;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(440px,92vw);max-height:86vh;overflow:auto;background:#fff;border-radius:14px;padding:18px;
+  font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;color:#0B2233;
+  box-shadow:0 24px 60px rgba(11,34,51,.35);}
+.sheet.on,.sheet-bg.on{display:block;}
+.sheet h2{font-size:16px;margin:0 0 14px;}
+.f{margin-bottom:11px;}
+.f label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;color:#4A6076;margin-bottom:4px;}
+.f .note{font-weight:400;letter-spacing:0;color:#6B7A8F;}
+.f input,.f select,.f textarea{width:100%;padding:8px 10px;border:1.5px solid #CBD8E0;border-radius:7px;font-size:14px;font-family:inherit;background:#fff;color:inherit;}
+.f textarea{min-height:64px;resize:vertical;}
+.row{display:flex;gap:10px;}
+.row .f{flex:1;}
+.sheet-ops{display:flex;gap:8px;margin-top:16px;}
+.sheet-ops .btn{flex:1;text-align:center;font-family:inherit;font-size:13px;font-weight:700;padding:10px;border-radius:999px;border:1.5px solid #0B2233;background:#0B2233;color:#fff;cursor:pointer;}
+.sheet-ops .btn.ghost{background:transparent;color:#0B2233;border-color:#CBD8E0;}
+.sheet-ops .btn.danger{background:transparent;color:#B8452E;border-color:#B8452E;flex:0 0 auto;}
+.sheet pre{background:#F2F5F7;border-radius:8px;padding:10px;font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:40vh;overflow:auto;}
+@media (max-width:520px){
+  #tripTitle{font-size:21px;}
+  .card{grid-template-columns:54px 1fr auto;}
+  .move{padding-left:58px;}
+  .hdr-r .btn{font-size:11.5px;padding:7px 10px;}
+}
+@media (prefers-reduced-motion:reduce){.card,.card.dragging{transition:none;transform:none;}
+  .card.shifted,#app.read .card{animation:none;}}
+</style>
+
+<script>
+(function(){
+const CATS={観光:{c:'#1B5E8C'},食事:{c:'#B8452E'},温泉:{c:'#C98A1E'},宿:{c:'#2E7D6B'},
+            体験:{c:'#6B4A9E'},移動:{c:'#6B7A8F'},確認:{c:'#0B2233'}};
+const MODES=['車','徒歩','電車・バス','船'];
+const uid=()=>Math.random().toString(36).slice(2,9);
+const toM=s=>{const m=/^(\d{1,2}):(\d{2})$/.exec((s||'').trim());return m?(+m[1]*60+ +m[2]):null;};
+const toS=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const linkify=s=>esc(s).replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+function seed(){
+  const d1='d1',d2='d2',d3='d3';
+  const I=(day,title,cat,dur,move,mode,start,close,note)=>
+    ({id:uid(),day,title,cat,dur,move:move||0,mode:mode||'車',start:start||null,close:close||null,note:note||'',stale:false});
+  return{
+    title:'南紀勝浦の旅',
+    sub:'2026/8/9(日) – 8/11(火) ／ 2泊3日',
+    days:[{id:d1,date:'8/9',w:'SUN',label:'海水浴 → 洞窟温泉'},
+          {id:d2,date:'8/10',w:'MON',label:'太地 → 串本'},
+          {id:d3,date:'8/11',w:'TUE',label:'那智の滝 → 帰路'}],
+    spans:[
+      {id:uid(),title:'ホテル浦島（南紀勝浦温泉）2泊',cat:'宿',from:d1,to:d3,note:'予約確定済み／送迎船の運航可否は前日に要確認'},
+      {id:uid(),title:'台風13号の海況・R42の道路状況チェック',cat:'確認',from:d1,to:d3,note:'毎朝ひらく'}
+    ],
+    items:[
+      I(d1,'大阪の自宅を出発','移動',0,0,'車','07:30',null,'水着は下に着ておく'),
+      I(d1,'ブルービーチ那智で海水浴','観光',180,240,'車','12:00','16:30','監視あり／駐車場500円・シャワー更衣室あり\nhttps://www.wakayama-kanko.or.jp/spots/detail_3251.html'),
+      I(d1,'ホテル浦島 チェックイン','宿',30,20,'車','15:30',null,'天満駐車場（400台無料）→ マイクロバス送迎（迎え最終19:30）'),
+      I(d1,'大洞窟温泉めぐり（忘帰洞・玄武洞）','温泉',120,0,'徒歩','16:00',null,'6つの湯をスタンプラリー感覚で\nhttps://urashimaresortsandspa.jp/wakayama-hotelurashima/spa/'),
+      I(d1,'ホテルで夕食（生マグロ）','食事',150,0,'徒歩','18:30',null,''),
+
+      I(d2,'朝食','食事',60,0,'徒歩','08:00',null,''),
+      I(d2,'太地町立くじらの博物館','観光',150,20,'車','09:30','17:00','イルカにタッチ・餌やり／大人1,800円 小中900円\nショー時間は前日に確認\nhttps://www.kujirakan.jp/'),
+      I(d2,'ランチ（道の駅たいじ or 串本）','食事',60,30,'車','12:00',null,''),
+      I(d2,'串本海中公園','観光',165,15,'車','13:15','16:30','水族館＋海中展望塔＋ステラマリス／観光船は海況で欠航あり TEL 0735-62-1122\nhttps://www.kushimoto.co.jp/'),
+      I(d2,'道の駅「くしもと橋杭岩」','観光',20,5,'車','16:00',null,'記念撮影＆ソフトクリーム'),
+      I(d2,'温泉でリセット','温泉',60,45,'車','17:00',null,''),
+      I(d2,'ホテルで夕食','食事',150,0,'徒歩','18:30',null,''),
+
+      I(d3,'勝浦漁港の朝さんぽ','観光',60,0,'徒歩','08:00',null,'早起きできれば。セリ見学は時期・曜日次第'),
+      I(d3,'朝食','食事',60,10,'徒歩',null,null,''),
+      I(d3,'チェックアウト','宿',15,0,'徒歩','10:00',null,''),
+      I(d3,'那智の滝（滝前まで車・短時間版）','観光',45,15,'車','10:15','16:30','熊野那智大社の石段はカット\nhttps://www.wakayama-kanko.or.jp/courses/detail_34.html'),
+      I(d3,'那智エリアでランチ','食事',60,10,'車','11:30',null,''),
+      I(d3,'大阪へ帰る（とれとれ市場に寄り道も）','移動',240,10,'車','12:30',null,'大阪まで約4時間')
+    ]
+  };
+}
+
+let S=seed(), storeOK=true, VIEW='edit';
+let ROOM=null, NAME='', REV=0, LASTBY='', SYNCERR=false, saving=false, pending=false;
+const roomKey=c=>'trip-room-'+c;
+const makeCode=()=>{const a='ABCDEFGHJKLMNPRSTUVWXY3456789';let s='';for(let i=0;i<6;i++)s+=a[Math.floor(Math.random()*a.length)];return s;};
+const sheet=document.getElementById('sheet'), bg=document.getElementById('sheetBg');
+
+async function save(){
+  if(!storeOK) return;
+  if(saving){ pending=true; return; }
+  saving=true;
+  try{
+    await window.storage.set('trip-timeline-v1', JSON.stringify({room:ROOM,name:NAME,doc:S}));
+    if(ROOM){ REV=Date.now(); LASTBY=NAME||'だれか';
+      await window.storage.set(roomKey(ROOM), JSON.stringify({rev:REV,by:LASTBY,doc:S}), true); SYNCERR=false; }
+  }catch(e){ if(ROOM) SYNCERR=true; else storeOK=false; }
+  saving=false;
+  if(pending){ pending=false; save(); } else syncbar();
+}
+async function pull(){
+  if(!ROOM||drag||sheet.classList.contains('on')) return;
+  try{
+    const r=await window.storage.get(roomKey(ROOM)); if(!r||!r.value) return;
+    const d=JSON.parse(r.value); SYNCERR=false;
+    if(d.rev>REV){ REV=d.rev; LASTBY=d.by||'だれか'; S=d.doc; render({push:false}); } else syncbar();
+  }catch(e){ SYNCERR=true; syncbar(); }
+}
+async function load(){
+  try{ const r=await window.storage.get('trip-timeline-v1');
+    if(r&&r.value){ const p=JSON.parse(r.value);
+      if(p&&p.doc){ S=p.doc; ROOM=p.room||null; NAME=p.name||''; } else if(p&&p.days){ S=p; } } }
+  catch(e){ /* 初回は未保存。初期プランのまま始める */ }
+  S.items.forEach(i=>{ if(i.move==null)i.move=0; if(!i.mode)i.mode='車'; });
+  if(ROOM) await pull();
+  render();
+  setInterval(pull, 8000);
+}
+function syncbar(){
+  const el=document.getElementById('syncbar');
+  if(!ROOM){ el.className='syncbar'; el.innerHTML=''; return; }
+  el.className='syncbar on';
+  const t=REV?new Date(REV).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'—';
+  el.innerHTML=`<span class="dot ${SYNCERR?'warn':''}"></span><span>合言葉</span><b>${ROOM}</b>
+    <span>${SYNCERR?'同期できていません。通信を確認して「いま読み込む」を押してください':'最終更新 '+esc(LASTBY)+' '+t}</span>
+    <button class="lnk" id="syncNow">いま読み込む</button>`;
+  const b=document.getElementById('syncNow'); if(b) b.onclick=()=>pull();
+}
+
+/* 到着時刻の計算：移動はスポットにぶら下がるので、並び替えても迷子にならない */
+function computed(dayId){
+  const list=S.items.filter(i=>i.day===dayId);
+  let cur=null; const out=[];
+  list.forEach((i,n)=>{
+    const arrive = cur==null ? null : cur + (+i.move||0);
+    let st, late=0;
+    if(i.start!=null){ st=toM(i.start); if(arrive!=null && arrive>st){ late=arrive-st; } }
+    else { st = arrive!=null ? arrive : 540; }
+    const en = st + (+i.dur||0);
+    const over = i.close!=null && en > toM(i.close) ? en-toM(i.close) : 0;
+    cur = en;
+    out.push({item:i,start:st,end:en,late,over,first:n===0});
+  });
+  return out;
+}
+
+function snapshot(){ const m={}; S.days.forEach(d=>computed(d.id).forEach(r=>m[r.item.id]=r.start)); return m; }
+function flashShifted(before){
+  if(!before) return;
+  const after=snapshot();
+  Object.keys(after).forEach(id=>{
+    if(before[id]!=null && before[id]!==after[id]){
+      const el=document.querySelector('.card[data-id="'+id+'"]');
+      if(el){ el.classList.remove('shifted'); void el.offsetWidth; el.classList.add('shifted'); }
+    }
+  });
+}
+function render(opt){
+  const push=!(opt&&opt.push===false);
+  document.getElementById('app').className = VIEW==='read' ? 'read' : '';
+  document.getElementById('tripTitle').textContent=S.title;
+  document.getElementById('tripTitle').setAttribute('contenteditable', VIEW==='edit');
+  document.getElementById('tripSub').textContent=S.sub;
+  [...document.querySelectorAll('#seg button')].forEach(b=>b.classList.toggle('on',b.dataset.view===VIEW));
+  document.getElementById('legend').innerHTML = VIEW==='read' ? '' :
+    Object.keys(CATS).map(k=>`<span><i style="background:${CATS[k].c}"></i>${k}</span>`).join('');
+  document.getElementById('hint').innerHTML = VIEW==='read'
+    ? 'このページを家族に見せてください。時刻は「組み立てる」で直せます。'
+    : 'カードを長押し（PCはドラッグ）で入れ替え。日をまたいで移動もできます。<span class="pin-ic">◆</span> は時刻を固定した予定。移動時間はスポットにぶら下がっているので、並び替えても迷子になりません。ただし前後が変わった移動には <b style="color:#B8452E">要確認</b> が付きます。共有中は8秒ごとに全員の変更を読み込みます。';
+
+  const dayName=id=>{const d=S.days.find(x=>x.id===id);return d?d.date:'?';};
+  document.getElementById('spans').innerHTML = S.spans.length? S.spans.map(s=>`
+    <div class="spanbar" style="border-left-color:${CATS[s.cat]?CATS[s.cat].c:'#2E7D6B'}">
+      <div><div class="t">${esc(s.title)}</div>${s.note?`<div class="r">${esc(s.note)}</div>`:''}</div>
+      <div style="display:flex;align-items:center;gap:6px"><span class="r">${dayName(s.from)} → ${dayName(s.to)}</span>
+      ${VIEW==='edit'?`<button class="x" data-span="${s.id}" aria-label="またぎを削除">✕</button>`:''}</div>
+    </div>`).join('') : '';
+
+  const list=document.getElementById('list'); list.innerHTML='';
+  const problems=[];
+  S.days.forEach(d=>{
+    const rows=computed(d.id);
+    const tot=rows.length? toS(rows[0].start)+'–'+toS(rows[rows.length-1].end) : '—';
+    const h=document.createElement('div'); h.className='day-header'; h.dataset.day=d.id;
+    h.innerHTML=`<span class="d">${d.date}</span><span class="w">${d.w}</span><span class="rule"></span>
+      <span class="sum">${esc(d.label)} ／ ${tot}</span>`;
+    list.appendChild(h);
+    if(!rows.length){const e=document.createElement('div');e.className='empty';e.textContent='この日はまだ予定なし。ここにカードをドロップ。';list.appendChild(e);}
+    rows.forEach(r=>{
+      if(!r.first && (r.item.move>0 || r.item.stale)) list.appendChild(moveEl(r.item));
+      list.appendChild(cardEl(r));
+      if(r.late) problems.push({lv:'bad',d:d.date,t:r.item.title,msg:`前の予定から続けると ${toS(r.start+r.late)} 着。固定した ${r.item.start} に <b>${r.late}分 間に合いません</b>`});
+      if(r.over) problems.push({lv:'mild',d:d.date,t:r.item.title,msg:`終わりが ${toS(r.end)}。営業・入場は ${r.item.close} までなので <b>${r.over}分オーバー</b>`});
+      if(r.item.stale) problems.push({lv:'mild',d:d.date,t:r.item.title,msg:'並び替えで前の場所が変わりました。<b>移動時間の確認を</b>'});
+    });
+  });
+  document.getElementById('alerts').innerHTML = problems.map(p=>
+    `<div class="alert ${p.lv==='mild'?'mild':''}"><span>${p.lv==='mild'?'▲':'●'}</span><span><b>${p.d} ${esc(p.t)}</b>：${p.msg}</span></div>`).join('');
+
+  if(push) save(); else syncbar();
+}
+
+function moveEl(i){
+  const el=document.createElement('div');
+  el.className='move'+(i.stale?' stale':'');
+  el.innerHTML=`<span class="l"></span><span>${esc(i.mode)} ${i.move}分</span>`+
+    (i.stale?`<span>要確認</span>${VIEW==='edit'?`<button data-ok="${i.id}">これでOK</button>`:''}`:'');
+  return el;
+}
+function cardEl(r){
+  const i=r.item, c=CATS[i.cat]?CATS[i.cat].c:'#6B7A8F';
+  const el=document.createElement('div');
+  el.className='card'+(r.late?' bad':''); el.dataset.id=i.id; el.style.borderLeftColor=c;
+  el.innerHTML=`
+    <div class="time">${toS(r.start)}${i.start!=null?' <span class="pin">◆</span>':''}<span class="end">${toS(r.end)}</span></div>
+    <div class="body"><div class="t"><span class="tag" style="background:${c}">${i.cat}</span>${esc(i.title)}</div>
+      ${i.close?`<div class="m">${esc(i.close)} まで</div>`:''}
+      ${i.note?`<div class="m">${linkify(i.note)}</div>`:''}
+      ${r.late?`<div class="flag">● ${r.late}分 間に合いません</div>`:''}
+      ${r.over?`<div class="flag">▲ 閉まる時刻を ${r.over}分 過ぎます</div>`:''}</div>
+    <div><div class="ops">
+      <button data-up="${i.id}" aria-label="ひとつ上へ">▲</button>
+      <button data-down="${i.id}" aria-label="ひとつ下へ">▼</button>
+      <button data-edit="${i.id}" aria-label="編集">✎</button>
+    </div><div class="dur">${i.dur}分</div></div>`;
+  return el;
+}
+
+/* 並び替え */
+let drag=null;
+document.getElementById('list').addEventListener('pointerdown',e=>{
+  if(VIEW!=='edit')return;
+  if(e.target.closest('button')||e.target.closest('a'))return;
+  const card=e.target.closest('.card'); if(!card)return;
+  const rect=card.getBoundingClientRect(), start={x:e.clientX,y:e.clientY};
+  let started=false, timer=setTimeout(()=>begin(),160);
+  const begin=()=>{ if(started)return; started=true; clearTimeout(timer);
+    const ph=document.createElement('div'); ph.className='ph'; ph.style.height=rect.height+'px';
+    card.parentNode.insertBefore(ph,card);
+    card.style.setProperty('--dw',rect.width+'px'); card.classList.add('dragging');
+    drag={card,ph,dx:start.x-rect.left,dy:start.y-rect.top}; move(e); };
+  const move=ev=>{
+    if(!started){ if(Math.abs(ev.clientY-start.y)>6||Math.abs(ev.clientX-start.x)>6) begin(); else return; }
+    ev.preventDefault();
+    drag.card.style.left=(ev.clientX-drag.dx)+'px'; drag.card.style.top=(ev.clientY-drag.dy)+'px';
+    place(ev.clientY);
+    const m=70;
+    if(ev.clientY<m) window.scrollBy(0,-12); else if(ev.clientY>window.innerHeight-m) window.scrollBy(0,12);
+  };
+  const up=()=>{ clearTimeout(timer);
+    document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up);
+    document.removeEventListener('pointercancel',up);
+    if(!started||!drag)return; commit(); drag=null; };
+  document.addEventListener('pointermove',move,{passive:false});
+  document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
+});
+function place(y){
+  const list=document.getElementById('list');
+  const kids=[...list.children].filter(n=>n!==drag.card&&n!==drag.ph&&!n.classList.contains('move'));
+  let target=null;
+  for(const n of kids){ const r=n.getBoundingClientRect(); if(y < r.top + r.height/2){ target=n; break; } }
+  if(target) list.insertBefore(drag.ph,target); else list.appendChild(drag.ph);
+}
+function neighbors(){ const m={}; S.days.forEach(d=>{ let p=null;
+  S.items.filter(i=>i.day===d.id).forEach(i=>{ m[i.id]=p; p=i.id; }); }); return m; }
+function commit(){
+  const times=snapshot();
+  const before=neighbors();
+  const nodes=[...document.getElementById('list').children];
+  let day=S.days[0].id, order=[];
+  nodes.forEach(n=>{
+    if(n.classList.contains('day-header')) day=n.dataset.day;
+    else if(n===drag.ph) order.push({id:drag.card.dataset.id,day});
+    else if(n.classList.contains('card')) order.push({id:n.dataset.id,day});
+  });
+  const map={}; S.items.forEach(i=>map[i.id]=i);
+  S.items = order.map(o=>{const i=map[o.id]; i.day=o.day; return i;});
+  const after=neighbors();
+  S.items.forEach(i=>{ if(before[i.id]!==after[i.id] && (i.move>0||after[i.id]!=null)) i.stale=true; });
+  drag.card.classList.remove('dragging'); drag.card.removeAttribute('style'); drag.ph.remove();
+  render(); flashShifted(times);
+}
+
+document.getElementById('list').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  if(b.dataset.ok){ const i=S.items.find(x=>x.id===b.dataset.ok); if(i){i.stale=false;render();} return; }
+  if(b.dataset.edit) return openItem(b.dataset.edit);
+  const id=b.dataset.up||b.dataset.down; if(!id)return;
+  const times=snapshot();
+  const before=neighbors();
+  const idx=S.items.findIndex(i=>i.id===id), it=S.items[idx];
+  const same=S.items.filter(i=>i.day===it.day), p=same.indexOf(it), dir=b.dataset.up?-1:1;
+  if(p+dir<0||p+dir>=same.length){
+    const di=S.days.findIndex(d=>d.id===it.day)+dir; if(di<0||di>=S.days.length)return;
+    S.items.splice(idx,1); it.day=S.days[di].id;
+    const tgt=S.items.filter(i=>i.day===it.day);
+    if(dir<0){ const last=tgt[tgt.length-1]; S.items.splice(last?S.items.indexOf(last)+1:0,0,it); }
+    else { const first=tgt[0]; S.items.splice(first?S.items.indexOf(first):S.items.length,0,it); }
+  } else { const other=same[p+dir], oi=S.items.indexOf(other); S.items.splice(idx,1); S.items.splice(oi,0,it); }
+  const after=neighbors();
+  S.items.forEach(i=>{ if(before[i.id]!==after[i.id] && (i.move>0||after[i.id]!=null)) i.stale=true; });
+  render(); flashShifted(times);
+});
+document.getElementById('spans').addEventListener('click',e=>{
+  const b=e.target.closest('[data-span]'); if(!b)return;
+  S.spans=S.spans.filter(s=>s.id!==b.dataset.span); render();
+});
+document.getElementById('seg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return; VIEW=b.dataset.view; render({push:false});
+});
+document.getElementById('tripTitle').addEventListener('blur',e=>{S.title=e.target.textContent.trim()||'旅';save();});
+
+/* シート */
+function close(){sheet.classList.remove('on');bg.classList.remove('on');sheet.innerHTML='';}
+bg.addEventListener('click',close);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+function open(html){sheet.innerHTML=html;sheet.classList.add('on');bg.classList.add('on');}
+const catOpts=v=>Object.keys(CATS).map(k=>`<option ${k===v?'selected':''}>${k}</option>`).join('');
+const modeOpts=v=>MODES.map(k=>`<option ${k===v?'selected':''}>${k}</option>`).join('');
+const dayOpts=v=>S.days.map(d=>`<option value="${d.id}" ${d.id===v?'selected':''}>${d.date}（${d.label}）</option>`).join('');
+
+function openItem(id){
+  const i=id?S.items.find(x=>x.id===id):{title:'',cat:'観光',dur:60,move:0,mode:'車',start:null,close:null,note:'',day:S.days[0].id};
+  open(`<h2>${id?'スポットを編集':'スポットを追加'}</h2>
+    <div class="f"><label>場所・やること</label><input id="f-t" value="${esc(i.title)}" placeholder="例：ブルービーチ那智で海水浴"></div>
+    <div class="row">
+      <div class="f"><label>カテゴリ</label><select id="f-c">${catOpts(i.cat)}</select></div>
+      <div class="f"><label>滞在（分）</label><input id="f-d" type="number" min="0" step="5" value="${i.dur}"></div>
+    </div>
+    <div class="row">
+      <div class="f"><label>ここまでの移動（分）</label><input id="f-mv" type="number" min="0" step="5" value="${i.move||0}"></div>
+      <div class="f"><label>手段</label><select id="f-md">${modeOpts(i.mode)}</select></div>
+    </div>
+    <div class="row">
+      <div class="f"><label>日</label><select id="f-day">${dayOpts(i.day)}</select></div>
+      <div class="f"><label>開始を固定 <span class="note">空欄なら自動</span></label><input id="f-s" placeholder="09:30" value="${i.start||''}"></div>
+    </div>
+    <div class="f"><label>閉まる時刻 <span class="note">入れると超過を警告します</span></label><input id="f-cl" placeholder="16:30" value="${i.close||''}"></div>
+    <div class="f"><label>メモ・URL</label><textarea id="f-n">${esc(i.note)}</textarea></div>
+    <div class="sheet-ops">
+      ${id?'<button class="btn danger" id="f-del">削除</button>':''}
+      <button class="btn ghost" id="f-cancel">やめる</button>
+      <button class="btn" id="f-ok">${id?'変更を保存':'追加する'}</button>
+    </div>`);
+  sheet.querySelector('#f-cancel').onclick=close;
+  const del=sheet.querySelector('#f-del'); if(del)del.onclick=()=>{S.items=S.items.filter(x=>x.id!==id);close();render();};
+  sheet.querySelector('#f-ok').onclick=()=>{
+    const t=sheet.querySelector('#f-t').value.trim(); if(!t){sheet.querySelector('#f-t').focus();return;}
+    const st=sheet.querySelector('#f-s').value.trim(), cl=sheet.querySelector('#f-cl').value.trim();
+    const o={title:t,cat:sheet.querySelector('#f-c').value,dur:+sheet.querySelector('#f-d').value||0,
+      move:+sheet.querySelector('#f-mv').value||0,mode:sheet.querySelector('#f-md').value,
+      day:sheet.querySelector('#f-day').value,start:toM(st)!=null?toS(toM(st)):null,
+      close:toM(cl)!=null?toS(toM(cl)):null,note:sheet.querySelector('#f-n').value,stale:false};
+    if(id){Object.assign(S.items.find(x=>x.id===id),o);}
+    else{const it=Object.assign({id:uid()},o); const tgt=S.items.filter(x=>x.day===o.day);
+      const last=tgt[tgt.length-1]; S.items.splice(last?S.items.indexOf(last)+1:S.items.length,0,it);}
+    close();render();
+  };
+  sheet.querySelector('#f-t').focus();
+}
+document.getElementById('btnAdd').onclick=()=>openItem(null);
+
+document.getElementById('btnSpan').onclick=()=>{
+  open(`<h2>数日にまたがる予定を追加</h2>
+    <div class="f"><label>内容</label><input id="s-t" placeholder="例：ホテル浦島 2泊"></div>
+    <div class="f"><label>カテゴリ</label><select id="s-c">${catOpts('宿')}</select></div>
+    <div class="row">
+      <div class="f"><label>開始日</label><select id="s-f">${dayOpts(S.days[0].id)}</select></div>
+      <div class="f"><label>終了日</label><select id="s-e">${dayOpts(S.days[S.days.length-1].id)}</select></div>
+    </div>
+    <div class="f"><label>メモ</label><input id="s-n" placeholder="確認事項など"></div>
+    <div class="sheet-ops"><button class="btn ghost" id="s-cancel">やめる</button><button class="btn" id="s-ok">追加する</button></div>`);
+  sheet.querySelector('#s-cancel').onclick=close;
+  sheet.querySelector('#s-ok').onclick=()=>{
+    const t=sheet.querySelector('#s-t').value.trim(); if(!t)return;
+    S.spans.push({id:uid(),title:t,cat:sheet.querySelector('#s-c').value,
+      from:sheet.querySelector('#s-f').value,to:sheet.querySelector('#s-e').value,note:sheet.querySelector('#s-n').value});
+    close();render();
+  };
+};
+
+document.getElementById('btnShare').onclick=()=>{
+  if(ROOM){
+    open(`<h2>みんなで共有中</h2>
+      <p style="font-size:13px;line-height:1.8;margin:0 0 12px">合言葉を知っている人は、この旅程を<b>見ることも書き換えることも</b>できます。パスワードではありません。家族・友達の範囲にとどめてください。</p>
+      <div class="f"><label>合言葉</label><input id="sh-code" value="${ROOM}" readonly style="font-family:ui-monospace,monospace;letter-spacing:.2em;font-size:18px;text-align:center"></div>
+      <div class="f"><label>あなたの表示名</label><input id="sh-name" value="${esc(NAME)}" placeholder="ママ"></div>
+      <p style="font-size:12px;line-height:1.7;color:#4A6076;margin:0">同時に直すと<b>あとから保存した内容が残ります</b>。同じ日をふたりで同時に触らないのが安全です。</p>
+      <div class="sheet-ops">
+        <button class="btn danger" id="sh-leave">共有をやめる</button>
+        <button class="btn ghost" id="sh-close">閉じる</button>
+        <button class="btn" id="sh-copy">合言葉をコピー</button>
+      </div>`);
+    sheet.querySelector('#sh-close').onclick=()=>{NAME=sheet.querySelector('#sh-name').value.trim();close();save();};
+    sheet.querySelector('#sh-copy').onclick=()=>{
+      navigator.clipboard.writeText(`「${S.title}」の旅程を共有します。アプリを開いて「みんなで共有」→合言葉 ${ROOM} を入力してください。`)
+        .then(()=>{sheet.querySelector('#sh-copy').textContent='コピーしました';},
+              ()=>{sheet.querySelector('#sh-copy').textContent='コピーできません。合言葉を手で伝えてください';});};
+    sheet.querySelector('#sh-leave').onclick=()=>{ROOM=null;REV=0;close();render();};
+    return;
+  }
+  open(`<h2>みんなで共有する</h2>
+    <p style="font-size:13px;line-height:1.8;margin:0 0 14px">合言葉をひとつ作って、家族や友達に伝えます。同じ合言葉を入れた人は、同じ旅程を見て書き換えられます。</p>
+    <div class="f"><label>あなたの表示名</label><input id="sh-name" placeholder="ママ" value="${esc(NAME)}"></div>
+    <div class="sheet-ops" style="margin-bottom:18px"><button class="btn" id="sh-new" style="flex:1">合言葉を作って共有をはじめる</button></div>
+    <div class="f"><label>すでに合言葉をもらっている場合</label><input id="sh-join" placeholder="例：K7P2MX" style="text-transform:uppercase;letter-spacing:.2em;font-family:ui-monospace,monospace"></div>
+    <div class="sheet-ops">
+      <button class="btn ghost" id="sh-cancel">やめる</button>
+      <button class="btn ghost" id="sh-go">この合言葉で参加する</button>
+    </div>
+    <p style="font-size:12px;line-height:1.7;color:#4A6076;margin:14px 0 0">参加すると、いま画面にある旅程は共有ボードの内容に置きかわります。</p>`);
+  sheet.querySelector('#sh-cancel').onclick=close;
+  sheet.querySelector('#sh-new').onclick=async()=>{
+    NAME=sheet.querySelector('#sh-name').value.trim()||'わたし';
+    ROOM=makeCode(); REV=0; close(); await save(); render(); };
+  sheet.querySelector('#sh-go').onclick=async()=>{
+    const c=sheet.querySelector('#sh-join').value.trim().toUpperCase();
+    if(c.length<4){sheet.querySelector('#sh-join').focus();return;}
+    NAME=sheet.querySelector('#sh-name').value.trim()||'わたし';
+    ROOM=c; REV=0; close();
+    let ok=false;
+    try{ const r=await window.storage.get(roomKey(c));
+      if(r&&r.value){ const d=JSON.parse(r.value); REV=d.rev||0; LASTBY=d.by||''; S=d.doc; ok=true; } }catch(e){}
+    if(ok){ render({push:false}); try{await window.storage.set('trip-timeline-v1',JSON.stringify({room:ROOM,name:NAME,doc:S}));}catch(e){} }
+    else{ SYNCERR=false; render(); alert('その合言葉のボードはまだありません。いまの旅程で新しく作りました。'); }
+  };
+};
+
+document.getElementById('btnExport').onclick=()=>{
+  let md=`# ${S.title}\n${S.sub}\n\n`;
+  if(S.spans.length){ md+='## またぎ予定\n'+S.spans.map(s=>{
+    const d=id=>{const x=S.days.find(y=>y.id===id);return x?x.date:'?';};
+    return `- [${s.cat}] ${s.title}（${d(s.from)}→${d(s.to)}）${s.note?' ／ '+s.note:''}`;}).join('\n')+'\n\n'; }
+  S.days.forEach(d=>{
+    md+=`## ${d.date}（${d.w}）${d.label}\n`;
+    computed(d.id).forEach((r,n)=>{
+      if(!r.first && r.item.move>0) md+=`  ↓ ${r.item.mode} ${r.item.move}分${r.item.stale?'（要確認）':''}\n`;
+      md+=`- ${toS(r.start)}–${toS(r.end)}　[${r.item.cat}] ${r.item.title}${r.item.close?`（${r.item.close}まで）`:''}`;
+      if(r.late) md+=` ※${r.late}分 間に合いません`;
+      if(r.over) md+=` ※閉館を${r.over}分超過`;
+      md+='\n';
+      if(r.item.note) md+='  - '+r.item.note.replace(/\n/g,'\n  - ')+'\n';
+    });
+    md+='\n';
+  });
+  open(`<h2>書き出し（Markdown）</h2><pre id="ex">${esc(md)}</pre>
+    <div class="sheet-ops"><button class="btn ghost" id="e-close">閉じる</button><button class="btn" id="e-copy">コピーする</button></div>`);
+  sheet.querySelector('#e-close').onclick=close;
+  sheet.querySelector('#e-copy').onclick=()=>{
+    navigator.clipboard.writeText(md).then(()=>{sheet.querySelector('#e-copy').textContent='コピーしました';},
+      ()=>{sheet.querySelector('#e-copy').textContent='コピーできません。手動で選択を';});};
+};
+
+document.getElementById('btnReset').onclick=()=>{
+  open(`<h2>初期状態に戻す</h2><p style="font-size:13px;line-height:1.7">編集した内容はすべて消えて、和歌山・南紀勝浦の初期プランに戻ります。</p>
+    <div class="sheet-ops"><button class="btn ghost" id="r-no">やめる</button><button class="btn danger" id="r-yes" style="flex:1">戻す</button></div>`);
+  sheet.querySelector('#r-no').onclick=close;
+  sheet.querySelector('#r-yes').onclick=()=>{S=seed();close();render();};
+};
+
+load();
+})();
+</script>
